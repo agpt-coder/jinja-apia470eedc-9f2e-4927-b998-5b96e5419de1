@@ -1,0 +1,74 @@
+// datasource db defines the database connection settings.
+// It is configured for PostgreSQL and uses an environment variable for the connection URL.
+// The 'extensions' feature enables the use of PostgreSQL-specific data types.
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+}
+
+// generator db configures Prisma Client settings.
+// It is set up to use Prisma Client Python with asyncio interface and specific features.
+generator db {
+  provider             = "prisma-client-py"
+  interface            = "asyncio"
+  recursive_type_depth = 5
+  previewFeatures      = ["postgresqlExtensions"]
+}
+
+model User {
+  id        String     @id @default(dbgenerated("gen_random_uuid()"))
+  email     String     @unique
+  password  String
+  role      UserRole   @default(USER)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  documents Document[]
+}
+
+model Document {
+  id        String       @id @default(dbgenerated("gen_random_uuid()"))
+  title     String
+  content   Json // Use JSON to store structured content for Jinja rendering
+  type      DocumentType
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  ownerId   String
+  owner     User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  Template  Template[]
+}
+
+model Template {
+  id         String    @id @default(dbgenerated("gen_random_uuid()"))
+  name       String
+  html       String // Store the Jinja2 HTML template
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  documentId String?
+  document   Document? @relation(fields: [documentId], references: [id])
+}
+
+model Log {
+  id        String   @id @default(dbgenerated("gen_random_uuid()"))
+  message   String
+  level     LogLevel
+  createdAt DateTime @default(now())
+}
+
+enum UserRole {
+  ADMIN
+  USER
+  PREMIUMUSER
+}
+
+enum DocumentType {
+  BILL
+  INVOICE
+  RECEIPT
+}
+
+enum LogLevel {
+  INFO
+  ERROR
+  DEBUG
+}
+
